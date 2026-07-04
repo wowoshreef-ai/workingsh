@@ -182,7 +182,28 @@
   .save-flash{ color:#3ddc84; opacity:0; transition:opacity .3s; }
   .save-flash.show{ opacity:1; }
 
-  .danger-zone{ display:flex; justify-content:center; margin-top:44px; }
+  .thumb-prompt-row{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-top:12px; }
+  .thumb-prompt-btn{
+    background:rgba(245,185,66,0.12); border:1px solid rgba(245,185,66,0.4);
+    color:#f5b942; font-family:'Cairo'; font-weight:700; font-size:12.5px;
+    padding:8px 15px; border-radius:100px; cursor:pointer; transition:all .2s;
+    white-space:nowrap;
+  }
+  .thumb-prompt-btn:hover{ background:rgba(245,185,66,0.2); }
+  .thumb-prompt-btn:disabled{ opacity:.35; cursor:not-allowed; }
+  .thumb-flash{ font-size:11px; color:#3ddc84; opacity:0; transition:opacity .3s; }
+  .thumb-flash.show{ opacity:1; }
+
+  .hook-input{
+    width:100%; margin-bottom:8px;
+    background:rgba(245,185,66,0.06); border:1px solid rgba(245,185,66,0.3); border-radius:10px;
+    color:var(--text-hi); font-family:'Tajawal'; font-size:13px; font-weight:600;
+    padding:10px 12px; direction:rtl; text-align:right;
+  }
+  .hook-input:focus{ outline:none; border-color:#f5b942; }
+  .hook-input::placeholder{ color:var(--text-low); font-weight:400; }
+
+  .danger-zone{ display:flex; justify-content:center; gap:12px; flex-wrap:wrap; margin-top:44px; }
   .reset-btn{
     background:none; border:1px solid var(--border);
     color:var(--text-low); font-family:'Tajawal'; font-size:13px; padding:9px 20px;
@@ -227,6 +248,32 @@
   .modal-confirm{ background:#ff3d68; border-color:#ff3d68; color:#fff; }
   .modal-confirm:hover{ background:#ff2255; }
 
+  .editor-box{ max-width:640px; text-align:right; max-height:85vh; display:flex; flex-direction:column; }
+  .editor-body{ overflow-y:auto; max-height:52vh; margin:12px 0; padding-left:4px; }
+  .editor-day-section{ margin-bottom:20px; }
+  .editor-day-title{ font-family:'Cairo'; font-weight:800; font-size:14px; margin-bottom:10px; color:var(--text-hi); }
+  .editor-task-row{ display:flex; gap:8px; margin-bottom:8px; align-items:center; }
+  .editor-channel-select{
+    background:rgba(0,0,0,0.3); border:1px solid var(--border); color:var(--text-hi);
+    border-radius:8px; padding:8px 6px; font-family:'Tajawal'; font-size:12px; flex-shrink:0; max-width:110px;
+  }
+  .editor-label-input{
+    flex:1; min-width:0; background:rgba(0,0,0,0.3); border:1px solid var(--border); color:var(--text-hi);
+    border-radius:8px; padding:8px 10px; font-family:'Tajawal'; font-size:13px; direction:rtl; text-align:right;
+  }
+  .editor-label-input:focus, .editor-channel-select:focus{ outline:none; border-color:#f5b942; }
+  .editor-delete-btn{
+    background:rgba(255,61,104,0.12); border:1px solid rgba(255,61,104,0.35); color:#ff6b81;
+    border-radius:8px; width:34px; height:34px; cursor:pointer; flex-shrink:0; font-size:13px;
+  }
+  .editor-delete-btn:hover{ background:rgba(255,61,104,0.22); }
+  .editor-add-btn{
+    background:none; border:1px dashed var(--border); color:var(--text-mid);
+    border-radius:10px; padding:9px; width:100%; cursor:pointer; font-family:'Tajawal'; font-size:12.5px; margin-top:2px;
+    transition:all .2s;
+  }
+  .editor-add-btn:hover{ border-color:var(--text-mid); color:var(--text-hi); background:var(--glass-strong); }
+
   footer{ text-align:center; margin-top:40px; color:var(--text-low); font-size:12px; }
 
   @media (max-width:520px){
@@ -267,6 +314,7 @@
   <main class="days-grid" id="daysGrid"></main>
 
   <div class="danger-zone">
+    <button class="reset-btn" id="openTaskEditorBtn">✏️ تعديل قائمة المهام</button>
     <button class="reset-btn" id="openResetModalBtn">🔒 إعادة تعيين الجدول بالكامل</button>
   </div>
 
@@ -276,13 +324,26 @@
 <div class="modal-overlay" id="resetModal">
   <div class="modal-box">
     <div class="modal-icon">🔒</div>
-    <h3>متأكد إنك عايز تصفّر الجدول؟</h3>
-    <p class="modal-desc">هيتمسح كل الـ checkboxes والسكريبتات اللي كتبتها. اكتب الباسورد عشان تأكد.</p>
+    <h3 id="modalTitle">متأكد إنك عايز تصفّر الجدول؟</h3>
+    <p class="modal-desc" id="modalDesc">هيتمسح كل الـ checkboxes والسكريبتات اللي كتبتها. اكتب الباسورد عشان تأكد.</p>
     <input type="password" id="resetPasswordInput" placeholder="الباسورد" inputmode="numeric">
     <div class="modal-error" id="resetError">باسورد غلط، جرّب تاني.</div>
     <div class="modal-actions">
       <button class="modal-cancel" id="cancelResetBtn">إلغاء</button>
-      <button class="modal-confirm" id="confirmResetBtn">تأكيد المسح</button>
+      <button class="modal-confirm" id="confirmResetBtn">تأكيد</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="taskEditorModal">
+  <div class="modal-box editor-box">
+    <div class="modal-icon">✏️</div>
+    <h3>تعديل قائمة المهام</h3>
+    <p class="modal-desc">ضيف مهمة جديدة، غيّر القناة أو النص، أو احذف أي مهمة. متنساش تدوس حفظ في الآخر.</p>
+    <div class="editor-body" id="editorBody"></div>
+    <div class="modal-actions">
+      <button class="modal-cancel" id="cancelEditorBtn">إلغاء</button>
+      <button class="modal-confirm" id="saveEditorBtn">💾 حفظ التعديلات</button>
     </div>
   </div>
 </div>
@@ -300,18 +361,33 @@ const firebaseConfig = {
   appId: ""
 };
 
-import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
-import {
-  getFirestore,
-  doc,
-  getDoc,
-  setDoc,
-  onSnapshot
-} from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
+let db = null;
+let stateDocRef = null;
+let taskConfigDocRef = null;
+let firebaseReady = false;
+let fsGetDoc, fsSetDoc, fsOnSnapshot;
 
-const firebaseApp = initializeApp(firebaseConfig);
-const db = getFirestore(firebaseApp);
-const stateDocRef = doc(db, "weeklyTracker", "main");
+// تحميل Firebase بشكل غير معطّل: لو فشل التحميل (نت، إعدادات غلط، الدومين متحجب)
+// التطبيق هيفضل شغال محليًا (checkboxes/سكريبتات/برومبتات) من غير ما ينهار كله
+async function setupFirebase(){
+  try {
+    const [{ initializeApp }, { getFirestore, doc, getDoc, setDoc, onSnapshot }] = await Promise.all([
+      import("https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js"),
+      import("https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js")
+    ]);
+    const firebaseApp = initializeApp(firebaseConfig);
+    db = getFirestore(firebaseApp);
+    stateDocRef = doc(db, "weeklyTracker", "main");
+    taskConfigDocRef = doc(db, "weeklyTracker", "taskConfig");
+    fsGetDoc = getDoc;
+    fsSetDoc = setDoc;
+    fsOnSnapshot = onSnapshot;
+    firebaseReady = true;
+  } catch (e){
+    console.error('تعذر تحميل Firebase — التطبيق هيشتغل محليًا من غير مزامنة سحابية لحد ما تتظبط إعدادات firebaseConfig', e);
+    firebaseReady = false;
+  }
+}
 
 const CHANNELS = {
   'القيادي': { accent: 'var(--qiyadi)', glow: 'var(--qiyadi-glow)', icon: '⚡' },
@@ -320,23 +396,244 @@ const CHANNELS = {
   'سائح':    { accent: 'var(--saeh)',   glow: 'var(--saeh-glow)',   icon: '✈️' },
 };
 
-const DAYS = [
-  { name: 'الجمعة',  tasks: [ ['القيادي','فيديو 1'], ['القيادي','فيديو 2'], ['رائج','فيديو ترند'], ['عرب جيمرز','فيديو جيمنج'] ] },
-  { name: 'السبت',   tasks: [ ['القيادي','فيديو 1'], ['القيادي','فيديو 2'], ['رائج','فيديو ترند'], ['سائح','فيديو سياحي'] ] },
-  { name: 'الأحد',   tasks: [ ['القيادي','فيديو 1'], ['القيادي','فيديو 2'], ['رائج','فيديو ترند'], ['عرب جيمرز','فيديو جيمنج'] ] },
-  { name: 'الإثنين', tasks: [ ['القيادي','فيديو 1'], ['القيادي','فيديو 2'], ['رائج','فيديو ترند'], ['سائح','فيديو سياحي'] ] },
-  { name: 'الثلاثاء', tasks: [ ['القيادي','فيديو 1'], ['القيادي','فيديو 2'], ['رائج','فيديو ترند'], ['عرب جيمرز','فيديو جيمنج'] ] },
-  { name: 'الأربعاء', tasks: [ ['القيادي','فيديو 1'], ['القيادي','فيديو 2'], ['رائج','فيديو ترند'], ['سائح','فيديو سياحي'] ] },
-];
+function buildDefaultTaskConfig(){
+  const raw = [
+    { name: 'الجمعة',  tasks: [ ['القيادي','فيديو 1'], ['القيادي','فيديو 2'], ['رائج','فيديو ترند'], ['عرب جيمرز','فيديو جيمنج'] ] },
+    { name: 'السبت',   tasks: [ ['القيادي','فيديو 1'], ['القيادي','فيديو 2'], ['رائج','فيديو ترند'], ['سائح','فيديو سياحي'] ] },
+    { name: 'الأحد',   tasks: [ ['القيادي','فيديو 1'], ['القيادي','فيديو 2'], ['رائج','فيديو ترند'], ['عرب جيمرز','فيديو جيمنج'] ] },
+    { name: 'الإثنين', tasks: [ ['القيادي','فيديو 1'], ['القيادي','فيديو 2'], ['رائج','فيديو ترند'], ['سائح','فيديو سياحي'] ] },
+    { name: 'الثلاثاء', tasks: [ ['القيادي','فيديو 1'], ['القيادي','فيديو 2'], ['رائج','فيديو ترند'], ['عرب جيمرز','فيديو جيمنج'] ] },
+    { name: 'الأربعاء', tasks: [ ['القيادي','فيديو 1'], ['القيادي','فيديو 2'], ['رائج','فيديو ترند'], ['سائح','فيديو سياحي'] ] },
+  ];
+  return raw.map((day, di) => ({
+    name: day.name,
+    tasks: day.tasks.map((t, ti) => ({ id: `d${di}-t${ti}`, channel: t[0], label: t[1] }))
+  }));
+}
 
-let state = {}; // { [id]: { done: bool, script: string } }
+// taskConfig هو المصدر الوحيد لهيكل الأيام والمهام — قابل للتعديل من مودال "تعديل قائمة المهام"
+let taskConfig = buildDefaultTaskConfig();
+let lastSyncedTaskConfigJSON = '';
+
+let state = {}; // { [taskId]: { done: bool, script: string, hook: string } }
 let saveTimer = null;
 let lastSyncedJSON = '';
 let isFirstSnapshot = true;
 
-function taskId(dayIdx, taskIdx){ return `d${dayIdx}-t${taskIdx}`; }
-function getTaskState(id){ return state[id] || { done:false, script:'' }; }
-function ensureTaskState(id){ if(!state[id]) state[id] = { done:false, script:'' }; return state[id]; }
+const NAVY_THUMBNAIL_TEMPLATE = `أنت خبير عالمي في تصميم الصور المصغّرة (YouTube Thumbnails) وصناعة CTR عالي جدًا، ومتخصص في بناء أفكار فيروسيّة تناسب Shorts / Reels / TikTok.
+سيتم تزويدك بالسكريبت الكامل للفيديو.
+مهمتك هي تحليل السكريبت بالكامل ثم استخراج الفكرة الأساسية وأقوى لحظة فيه، وبعدها تنفيذ جميع الخطوات التالية تلقائيًا دون طرح أي أسئلة.
+🎬 السكريبت:
+[ضع السكريبت هنا]
+🎨 هوية القناة (ثابتة إلزاميًا)
+Primary Color:
+#0a295b (Deep Navy Blue)
+Secondary Color:
+#95add4 (Light Steel Blue)
+يلتزم التصميم بهذه الهوية بنسبة كبيرة، ولا تستخدم أي ألوان أخرى إلا إذا كانت ضرورية لزيادة الـCTR.
+Style:
+Premium / Tech / Cinematic / Bold
+⚙️ Workflow
+1. اقرأ السكريبت بالكامل.
+2. استخرج تلقائيًا:
+- عنوان مناسب للفيديو.
+- الفكرة الأساسية.
+- أقوى Hook خلال أول ثوانٍ.
+- العنصر الأكثر إثارة بصريًا.
+3. أنشئ 3 Concepts مختلفة تمامًا:
+🔥 Concept A
+Visual Clickbait / Shock
+اذكر:
+- الفكرة البصرية
+- سبب جذبها
+- نص قصير للثامبنيل
+🔥 Concept B
+Story / Curiosity
+اذكر:
+- الفكرة البصرية
+- سبب جذبها
+- نص قصير للثامبنيل
+🔥 Concept C
+Minimal / Premium
+اذكر:
+- الفكرة البصرية
+- سبب جذبها
+- نص قصير للثامبنيل
+4. بعد عرض الثلاثة Concepts اختر بنفسك أفضل Concept يحقق أعلى CTR بناءً على السكريبت، ولا تطلب مني الاختيار.
+5. بعد ذلك أنشئ برومبت واحد فقط باللغة الإنجليزية.
+🧠 يجب أن يحتوي البرومبت النهائي على:
+Ultra realistic cinematic 9:16 thumbnail (1080×1920)
+Very clear main subject
+Strong emotional facial expression if applicable
+Rule of thirds composition
+Powerful focal dominance
+Cinematic background directly related to the script
+HDR lighting
+Rim light
+Back light
+Professional shadows
+Energy effects
+Glow
+Particles
+Motion streaks
+Color grading dominated by:
+#0a295b
+#95add4
+Arabic text hook:
+Short
+Huge
+Easy to read on mobile
+Placed strategically
+Premium YouTube Shorts / TikTok / Reels thumbnail
+Maximum CTR
+No clutter
+No distractions
+Maximum visual impact within 0.5 seconds
+Output ONLY:
+1- الثلاثة Concepts
+2- أفضل Concept مع سبب اختياره
+3- برومبت إنجليزي واحد فقط
+لا تضف أي شرح أو ملاحظات بعد البرومبت النهائي.
+قبل اختيار الـConcept النهائي، قيّم كل Concept وفق المعايير التالية:
+- Scroll Stopping Power (/25)
+- Curiosity (/25)
+- Emotional Impact (/20)
+- Readability on Mobile (/15)
+- Visual Simplicity (/15)
+أعطِ كل Concept درجة من 100، ثم اختر الأعلى فقط، وبعدها أنشئ البرومبت النهائي بناءً عليه.`;
+
+const CYAN_THUMBNAIL_TEMPLATE = `أنت خبير عالمي في تصميم الصور المصغرة (YouTube Thumbnails) عالية معدل النقر (CTR)، ومتخصص في المحتوى الرائج، الغريب، والصادم على منصات YouTube Shorts / Reels / TikTok.
+سيتم تزويدك بالسكريبت الكامل للفيديو.
+مهمتك هي تحليل السكريبت بالكامل ثم استخراج الفكرة الأساسية وأقوى لحظة فيه، وبعدها إنشاء أفضل أفكار Thumbnail فيروسية دون طرح أي أسئلة.
+---
+# 🎬 السكريبت
+[ضع السكريبت هنا]
+---
+# 🎨 قواعد الهوية البصرية (إلزامي)
+استخدم دائمًا ألوان القناة:
+Primary Color
+#1da8e0
+Secondary Color
+#8fd6ee
+يجب توظيف هذه الألوان داخل:
+* Lighting
+* Glow
+* Energy Effects
+* Frames
+* Typography
+* Graphic Elements
+أسلوب التصميم:
+Modern • Viral • Breaking News • Shock • Premium
+التركيز على:
+* وضوح شديد
+* تباين مرتفع
+* بساطة بصرية
+* إيقاف السكروول خلال أقل من ثانية
+---
+# 🧠 Workflow
+## 1.
+اقرأ السكريبت بالكامل.
+ثم استخرج تلقائيًا:
+* عنوان مناسب للفيديو.
+* الفكرة الأساسية.
+* أقوى Hook في أول ثوانٍ.
+* أكثر عنصر يمكن تحويله إلى Thumbnail فيروسية.
+* المشاعر المسيطرة (صدمة – دهشة – خوف – فضول – غرابة).
+---
+## 2.
+أنشئ 3 Concepts مختلفة تمامًا.
+### 🔥 Concept A
+Shock / Clickbait
+اذكر:
+* الفكرة البصرية
+* لماذا ستوقف السكروول
+* نص Thumbnail (1–4 كلمات)
+---
+### 🔥 Concept B
+Story / Curiosity
+اذكر:
+* الفكرة البصرية
+* سبب الفضول
+* نص Thumbnail (1–4 كلمات)
+---
+### 🔥 Concept C
+Minimal / Powerful
+اذكر:
+* الفكرة البصرية
+* سبب قوتها
+* نص Thumbnail (1–4 كلمات)
+---
+## 3.
+قبل اختيار التصميم النهائي، قيّم كل Concept باستخدام الجدول التالي:
+* Scroll Stopping Power (/25)
+* Curiosity (/25)
+* Emotional Impact (/20)
+* Mobile Readability (/15)
+* Visual Simplicity (/15)
+احسب الدرجة النهائية من 100 لكل Concept.
+ثم اختر تلقائيًا التصميم الأعلى تقييمًا.
+لا تطلب مني اختيار Concept.
+---
+## 4.
+بعد اختيار أفضل Concept، أنشئ برومبت واحد فقط باللغة الإنجليزية.
+---
+# 📸 يجب أن يحتوي البرومبت النهائي على
+Ultra realistic cinematic vertical thumbnail
+1080×1920
+9:16
+Hyper realistic
+HDR
+Sharp focus
+Very high detail
+Maximum CTR
+One dominant subject only
+Strong facial expression (if applicable)
+Rule of thirds composition
+Focal dominance
+Professional depth separation
+Cinematic background directly related to the script
+Detailed environment description
+Camera angle
+Lighting using:
+* #1da8e0
+* #8fd6ee
+Strong glow
+Energy effects
+Motion blur
+Light streaks
+Particles
+Premium color grading
+Arabic Thumbnail Text:
+* 1–4 words only
+* Very large
+* Extremely readable on mobile
+* Positioned strategically
+* High contrast
+* Bold modern Arabic typography
+General Style:
+Viral cinematic hyper-realistic
+Breaking-news feeling
+Maximum visual impact in under 0.5 seconds
+No clutter
+No unnecessary objects
+No distracting details
+---
+# 📤 Output Format
+اعرض فقط بالترتيب:
+1. الثلاثة Concepts.
+2. تقييم كل Concept من 100.
+3. أفضل Concept مع سبب اختياره.
+4. برومبت إنجليزي واحد فقط جاهز لتوليد الصورة.
+لا تضف أي شرح أو ملاحظات بعد البرومبت النهائي.`;
+
+const THUMBNAIL_PROMPTS = {
+  'القيادي': NAVY_THUMBNAIL_TEMPLATE,
+  'رائج': CYAN_THUMBNAIL_TEMPLATE,
+  'عرب جيمرز': CYAN_THUMBNAIL_TEMPLATE,
+};
+
+function getTaskState(id){ return state[id] || { done:false, script:'', hook:'' }; }
+function ensureTaskState(id){ if(!state[id]) state[id] = { done:false, script:'', hook:'' }; return state[id]; }
 
 const checkIconSVG = `<svg viewBox="0 0 24 24" fill="none"><path d="M4 12.5L9.5 18L20 6" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 
@@ -358,10 +655,9 @@ function buildDayCard(day, dayIdx){
   const tasksWrap = document.createElement('div');
   tasksWrap.className = 'tasks';
 
-  day.tasks.forEach((t, taskIdx) => {
-    const [channel, label] = t;
-    const meta = CHANNELS[channel];
-    const id = taskId(dayIdx, taskIdx);
+  day.tasks.forEach((task) => {
+    const { id, channel, label } = task;
+    const meta = CHANNELS[channel] || CHANNELS['القيادي'];
 
     const block = document.createElement('div');
     block.className = 'task-block';
@@ -390,12 +686,20 @@ function buildDayCard(day, dayIdx){
 
     block.appendChild(row);
 
+    const hasThumbTemplate = !!THUMBNAIL_PROMPTS[channel];
+
     const panel = document.createElement('div');
     panel.className = 'script-panel';
     panel.id = `panel-${id}`;
     panel.innerHTML = `
+      <input type="text" class="hook-input" id="hook-${id}" placeholder="🪝 الهوك — أول جملة هتقولها في أول ثانيتين...">
       <textarea id="script-${id}" placeholder="اكتب هنا سكريبت ${channel} — ${label}..."></textarea>
       <div class="script-hint">بيتحفظ لوحده أول ما توقف تكتب <span class="save-flash" id="flash-${id}">✓ اتحفظ</span></div>
+      ${hasThumbTemplate ? `
+      <div class="thumb-prompt-row">
+        <button type="button" class="thumb-prompt-btn" id="thumbBtn-${id}" disabled>📋 نسخ برومبت ثامبنيل</button>
+        <span class="thumb-flash" id="thumbFlash-${id}">✓ اتنسخ، حطه في أداة توليد الصور</span>
+      </div>` : ''}
     `;
     block.appendChild(panel);
 
@@ -414,6 +718,13 @@ function buildDayCard(day, dayIdx){
       panel.classList.toggle('open');
     });
 
+    // event: خانة الهوك
+    const hookInput = panel.querySelector('.hook-input');
+    hookInput.addEventListener('input', (e) => {
+      ensureTaskState(id).hook = e.target.value;
+      queueSave();
+    });
+
     // event: script textarea
     const textarea = panel.querySelector('textarea');
     textarea.addEventListener('input', (e) => {
@@ -425,6 +736,26 @@ function buildDayCard(day, dayIdx){
       clearTimeout(textarea._flashTimer);
       textarea._flashTimer = setTimeout(() => flash.classList.add('show'), 500);
     });
+
+    // event: نسخ برومبت الثامبنيل مع حقن السكريبت مكان [ضع السكريبت هنا] (لو القناة ليها قالب)
+    if (hasThumbTemplate){
+      const thumbBtn = panel.querySelector('.thumb-prompt-btn');
+      const thumbFlash = panel.querySelector('.thumb-flash');
+      thumbBtn.addEventListener('click', async () => {
+        const scriptText = (getTaskState(id).script || '').trim();
+        if (!scriptText) return;
+        const template = THUMBNAIL_PROMPTS[channel];
+        const finalPrompt = template.replace('[ضع السكريبت هنا]', scriptText);
+        try {
+          await navigator.clipboard.writeText(finalPrompt);
+          thumbFlash.classList.add('show');
+          clearTimeout(thumbBtn._flashTimer);
+          thumbBtn._flashTimer = setTimeout(() => thumbFlash.classList.remove('show'), 2500);
+        } catch(err){
+          console.error('تعذر نسخ برومبت الثامبنيل', err);
+        }
+      });
+    }
   });
 
   card.appendChild(tasksWrap);
@@ -438,44 +769,82 @@ function updateScriptButton(id){
   btn.classList.toggle('has-script', hasScript);
   btn.querySelector('span').textContent = hasScript ? 'السكريبت جاهز' : 'اكتب سكريبت';
   btn.firstChild.textContent = hasScript ? '✅ ' : '📝 ';
+
+  const thumbBtn = document.getElementById(`thumbBtn-${id}`);
+  if (thumbBtn) thumbBtn.disabled = !hasScript;
 }
 
 function buildWeekStrip(){
   const strip = document.getElementById('weekStrip');
   strip.innerHTML = '';
-  DAYS.forEach((day, dayIdx) => {
+  taskConfig.forEach((day, dayIdx) => {
     const node = document.createElement('button');
     node.className = 'strip-node';
     node.innerHTML = `<span class="strip-dot" id="dot-${dayIdx}"></span><span class="strip-label">${day.name}</span>`;
     node.addEventListener('click', () => {
-      document.querySelector(`.day-card[data-day="${dayIdx}"]`).scrollIntoView({behavior:'smooth', block:'center'});
+      const cardEl = document.querySelector(`.day-card[data-day="${dayIdx}"]`);
+      if (cardEl) cardEl.scrollIntoView({behavior:'smooth', block:'center'});
     });
     strip.appendChild(node);
   });
 }
 
+// تحديث اسم التاب (Browser Tab) بعدد المهام الباقية النهاردة — من غير ما تفتح الموقع كل شوية
+const ORIGINAL_TAB_TITLE = document.title;
+const WEEKDAY_TO_DAYNAME = { 0:'الأحد', 1:'الإثنين', 2:'الثلاثاء', 3:'الأربعاء', 4:null, 5:'الجمعة', 6:'السبت' };
+
+function updateTabTitle(){
+  const todayName = WEEKDAY_TO_DAYNAME[new Date().getDay()];
+  if (!todayName){
+    document.title = ORIGINAL_TAB_TITLE; // النهاردة الخميس، مفيش مهام متتبّعة
+    return;
+  }
+  const today = taskConfig.find(d => d.name === todayName);
+  if (!today || !today.tasks.length){
+    document.title = ORIGINAL_TAB_TITLE;
+    return;
+  }
+  const total = today.tasks.length;
+  const done = today.tasks.filter(t => getTaskState(t.id).done).length;
+  const remaining = total - done;
+  document.title = remaining > 0
+    ? `(${remaining}) مهام باقية النهاردة`
+    : `✅ خلصت مهام النهاردة`;
+}
+
+function renderAll(){
+  const grid = document.getElementById('daysGrid');
+  grid.innerHTML = '';
+  taskConfig.forEach((day, idx) => grid.appendChild(buildDayCard(day, idx)));
+  buildWeekStrip();
+}
+
 function updateUI(){
   let totalDone = 0, totalTasks = 0;
 
-  DAYS.forEach((day, dayIdx) => {
+  taskConfig.forEach((day, dayIdx) => {
     let doneCount = 0;
-    day.tasks.forEach((_, taskIdx) => {
-      if (getTaskState(taskId(dayIdx, taskIdx)).done) doneCount++;
+    day.tasks.forEach(t => {
+      if (getTaskState(t.id).done) doneCount++;
     });
     const total = day.tasks.length;
     totalDone += doneCount;
     totalTasks += total;
 
     const pct = total ? Math.round((doneCount/total)*100) : 0;
-    document.getElementById(`bar-${dayIdx}`).style.width = pct + '%';
-    document.getElementById(`count-${dayIdx}`).textContent = `${doneCount}/${total}`;
+    const barEl = document.getElementById(`bar-${dayIdx}`);
+    if (barEl) barEl.style.width = pct + '%';
+    const countEl = document.getElementById(`count-${dayIdx}`);
+    if (countEl) countEl.textContent = `${doneCount}/${total}`;
 
     const card = document.querySelector(`.day-card[data-day="${dayIdx}"]`);
-    card.classList.toggle('complete', doneCount === total);
+    if (card) card.classList.toggle('complete', total > 0 && doneCount === total);
 
     const dot = document.getElementById(`dot-${dayIdx}`);
-    dot.classList.toggle('done', doneCount === total);
-    dot.classList.toggle('partial', doneCount > 0 && doneCount < total);
+    if (dot){
+      dot.classList.toggle('done', total > 0 && doneCount === total);
+      dot.classList.toggle('partial', doneCount > 0 && doneCount < total);
+    }
   });
 
   const overallPct = totalTasks ? Math.round((totalDone/totalTasks)*100) : 0;
@@ -483,16 +852,19 @@ function updateUI(){
   document.getElementById('ringFg').style.strokeDashoffset = circumference - (circumference*overallPct/100);
   document.getElementById('ringNum').textContent = overallPct + '%';
   document.getElementById('overallCount').textContent = `${totalDone} / ${totalTasks} مهمة`;
+
+  updateTabTitle();
 }
 
 async function loadState(){
+  if (!firebaseReady){ state = {}; return; }
   try {
-    const snap = await getDoc(stateDocRef);
+    const snap = await fsGetDoc(stateDocRef);
     if (snap.exists() && snap.data() && snap.data().data){
       state = snap.data().data;
     } else {
       state = {};
-      await setDoc(stateDocRef, { data: {}, updatedAt: Date.now() });
+      await fsSetDoc(stateDocRef, { data: {}, updatedAt: Date.now() });
     }
     lastSyncedJSON = JSON.stringify(state);
   } catch (e) {
@@ -507,11 +879,12 @@ function queueSave(){
 }
 
 async function saveState(){
+  if (!firebaseReady) return;
   try {
     const json = JSON.stringify(state);
     if (json === lastSyncedJSON) return; // مفيش تغيير فعلي، متبعتش كتابة زيادة
     lastSyncedJSON = json;
-    await setDoc(stateDocRef, { data: state, updatedAt: Date.now() });
+    await fsSetDoc(stateDocRef, { data: state, updatedAt: Date.now() });
   } catch (e) {
     console.error('تعذر حفظ الحالة في Firestore', e);
   }
@@ -519,7 +892,8 @@ async function saveState(){
 
 // مزامنة فورية: لو جهاز تاني عدّل البيانات، الصفحة دي بتتحدّث لوحدها من غير ما تعمل reload
 function attachRealtimeSync(){
-  onSnapshot(stateDocRef, (snap) => {
+  if (!firebaseReady) return;
+  fsOnSnapshot(stateDocRef, (snap) => {
     if (!snap.exists()) return;
     const remoteData = snap.data().data || {};
     const remoteJSON = JSON.stringify(remoteData);
@@ -540,13 +914,58 @@ function attachRealtimeSync(){
   });
 }
 
+// تحميل/حفظ/مزامنة قائمة المهام نفسها (لو اتعدّلت من مودال "تعديل قائمة المهام")
+async function loadTaskConfig(){
+  if (!firebaseReady) return;
+  try {
+    const snap = await fsGetDoc(taskConfigDocRef);
+    if (snap.exists() && snap.data() && Array.isArray(snap.data().days) && snap.data().days.length){
+      taskConfig = snap.data().days;
+    }
+    lastSyncedTaskConfigJSON = JSON.stringify(taskConfig);
+  } catch (e) {
+    console.error('تعذر تحميل قائمة المهام المخصصة، هيتم استخدام القائمة الافتراضية', e);
+  }
+}
+
+async function saveTaskConfig(){
+  if (!firebaseReady) return false;
+  try {
+    const json = JSON.stringify(taskConfig);
+    lastSyncedTaskConfigJSON = json;
+    await fsSetDoc(taskConfigDocRef, { days: taskConfig, updatedAt: Date.now() });
+    return true;
+  } catch (e) {
+    console.error('تعذر حفظ قائمة المهام', e);
+    return false;
+  }
+}
+
+function attachTaskConfigRealtimeSync(){
+  if (!firebaseReady) return;
+  fsOnSnapshot(taskConfigDocRef, (snap) => {
+    if (!snap.exists()) return;
+    const days = snap.data().days;
+    if (!Array.isArray(days)) return;
+    const json = JSON.stringify(days);
+    if (json === lastSyncedTaskConfigJSON) return;
+    lastSyncedTaskConfigJSON = json;
+    taskConfig = days;
+    renderAll();
+    applyStateToInputs();
+    updateUI();
+  });
+}
+
 function applyStateToInputs(){
-  DAYS.forEach((day, dayIdx) => {
-    day.tasks.forEach((_, taskIdx) => {
-      const id = taskId(dayIdx, taskIdx);
+  taskConfig.forEach(day => {
+    day.tasks.forEach(t => {
+      const id = t.id;
       const s = getTaskState(id);
       const chk = document.getElementById(`chk-${id}`);
       if (chk) chk.checked = !!s.done;
+      const hookEl = document.getElementById(`hook-${id}`);
+      if (hookEl && document.activeElement !== hookEl) hookEl.value = s.hook || '';
       const ta = document.getElementById(`script-${id}`);
       // لو المستخدم بيكتب في التكست اريا دي دلوقتي، ميتكتبش فوقها من تحديث جاي من جهاز تاني
       if (ta && document.activeElement !== ta) ta.value = s.script || '';
@@ -555,11 +974,13 @@ function applyStateToInputs(){
   });
 }
 
-const RESET_PASSWORD = '2002';
+const ACTION_PASSWORD = '2002';
+let pendingPasswordAction = null; // 'reset' | 'editTasks'
 
 function performFullReset(){
   state = {};
   document.querySelectorAll('.task input[type="checkbox"]').forEach(input => input.checked = false);
+  document.querySelectorAll('.hook-input').forEach(h => h.value = '');
   document.querySelectorAll('.script-panel textarea').forEach(ta => ta.value = '');
   document.querySelectorAll('.script-panel').forEach(p => p.classList.remove('open'));
   document.querySelectorAll('.script-toggle').forEach(btn => {
@@ -567,8 +988,29 @@ function performFullReset(){
     btn.firstChild.textContent = '📝 ';
     btn.querySelector('span').textContent = 'اكتب سكريبت';
   });
+  document.querySelectorAll('.thumb-prompt-btn').forEach(btn => btn.disabled = true);
+  document.querySelectorAll('.thumb-flash').forEach(f => f.classList.remove('show'));
   updateUI();
   saveState();
+}
+
+function openPasswordModal(action){
+  pendingPasswordAction = action;
+  const modal = document.getElementById('resetModal');
+  const title = document.getElementById('modalTitle');
+  const desc = document.getElementById('modalDesc');
+  if (action === 'reset'){
+    title.textContent = 'متأكد إنك عايز تصفّر الجدول؟';
+    desc.textContent = 'هيتمسح كل الـ checkboxes والسكريبتات والهوكس اللي كتبتها. اكتب الباسورد عشان تأكد.';
+  } else {
+    title.textContent = 'تعديل قائمة المهام';
+    desc.textContent = 'الباسورد مطلوب عشان تقدر تضيف أو تشيل أو تعدّل أي مهمة في الجدول.';
+  }
+  modal.classList.add('open');
+  const input = document.getElementById('resetPasswordInput');
+  input.value = '';
+  document.getElementById('resetError').classList.remove('show');
+  setTimeout(() => input.focus(), 50);
 }
 
 function attachResetListener(){
@@ -576,19 +1018,15 @@ function attachResetListener(){
   const input = document.getElementById('resetPasswordInput');
   const errorMsg = document.getElementById('resetError');
 
-  function openModal(){
-    modal.classList.add('open');
-    input.value = '';
-    errorMsg.classList.remove('show');
-    setTimeout(() => input.focus(), 50);
-  }
   function closeModal(){
     modal.classList.remove('open');
   }
   function tryConfirm(){
-    if (input.value === RESET_PASSWORD){
-      performFullReset();
+    if (input.value === ACTION_PASSWORD){
+      const action = pendingPasswordAction;
       closeModal();
+      if (action === 'reset') performFullReset();
+      else if (action === 'editTasks') openTaskEditorModal();
     } else {
       errorMsg.classList.add('show');
       input.classList.remove('shake');
@@ -599,23 +1037,137 @@ function attachResetListener(){
     }
   }
 
-  document.getElementById('openResetModalBtn').addEventListener('click', openModal);
+  document.getElementById('openResetModalBtn').addEventListener('click', () => openPasswordModal('reset'));
   document.getElementById('cancelResetBtn').addEventListener('click', closeModal);
   document.getElementById('confirmResetBtn').addEventListener('click', tryConfirm);
   modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
   input.addEventListener('keydown', (e) => { if (e.key === 'Enter') tryConfirm(); });
 }
 
-async function init(){
-  const grid = document.getElementById('daysGrid');
-  DAYS.forEach((day, idx) => grid.appendChild(buildDayCard(day, idx)));
-  buildWeekStrip();
+// ===== مودال تعديل قائمة المهام =====
+function buildEditorTaskRow(task){
+  const row = document.createElement('div');
+  row.className = 'editor-task-row';
+  if (task.id) row.dataset.taskId = task.id;
 
-  await loadState();
+  const select = document.createElement('select');
+  select.className = 'editor-channel-select';
+  Object.keys(CHANNELS).forEach(ch => {
+    const opt = document.createElement('option');
+    opt.value = ch;
+    opt.textContent = `${CHANNELS[ch].icon} ${ch}`;
+    if (ch === task.channel) opt.selected = true;
+    select.appendChild(opt);
+  });
+
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.className = 'editor-label-input';
+  input.value = task.label || '';
+  input.placeholder = 'اسم المهمة...';
+
+  const delBtn = document.createElement('button');
+  delBtn.type = 'button';
+  delBtn.className = 'editor-delete-btn';
+  delBtn.textContent = '🗑';
+  delBtn.title = 'حذف المهمة دي';
+  delBtn.addEventListener('click', () => row.remove());
+
+  row.appendChild(select);
+  row.appendChild(input);
+  row.appendChild(delBtn);
+  return row;
+}
+
+function openTaskEditorModal(){
+  const modal = document.getElementById('taskEditorModal');
+  const body = document.getElementById('editorBody');
+  body.innerHTML = '';
+
+  taskConfig.forEach((day, dayIdx) => {
+    const section = document.createElement('div');
+    section.className = 'editor-day-section';
+    section.dataset.day = dayIdx;
+
+    const title = document.createElement('div');
+    title.className = 'editor-day-title';
+    title.textContent = day.name;
+    section.appendChild(title);
+
+    const list = document.createElement('div');
+    list.className = 'editor-tasks-list';
+    day.tasks.forEach(task => list.appendChild(buildEditorTaskRow(task)));
+    section.appendChild(list);
+
+    const addBtn = document.createElement('button');
+    addBtn.type = 'button';
+    addBtn.className = 'editor-add-btn';
+    addBtn.textContent = '+ إضافة مهمة';
+    addBtn.addEventListener('click', () => {
+      list.appendChild(buildEditorTaskRow({ id: null, channel: 'القيادي', label: 'مهمة جديدة' }));
+    });
+    section.appendChild(addBtn);
+
+    body.appendChild(section);
+  });
+
+  modal.classList.add('open');
+}
+
+function closeTaskEditorModal(){
+  document.getElementById('taskEditorModal').classList.remove('open');
+}
+
+async function saveTaskEditor(){
+  const body = document.getElementById('editorBody');
+  const sections = [...body.querySelectorAll('.editor-day-section')];
+
+  const newConfig = sections.map(section => {
+    const dayIdx = Number(section.dataset.day);
+    const dayName = taskConfig[dayIdx].name;
+    const rows = [...section.querySelectorAll('.editor-task-row')];
+    const tasks = rows.map((row, i) => {
+      const channel = row.querySelector('.editor-channel-select').value;
+      const label = row.querySelector('.editor-label-input').value.trim() || 'مهمة بدون اسم';
+      const existingId = row.dataset.taskId;
+      const id = existingId || `custom-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,6)}-${i}`;
+      return { id, channel, label };
+    });
+    return { name: dayName, tasks };
+  });
+
+  taskConfig = newConfig;
+  renderAll();
   applyStateToInputs();
+  updateUI();
+  closeTaskEditorModal();
+
+  await saveTaskConfig();
+}
+
+function attachTaskEditorListener(){
+  document.getElementById('openTaskEditorBtn').addEventListener('click', () => openPasswordModal('editTasks'));
+  document.getElementById('cancelEditorBtn').addEventListener('click', closeTaskEditorModal);
+  document.getElementById('saveEditorBtn').addEventListener('click', saveTaskEditor);
+  document.getElementById('taskEditorModal').addEventListener('click', (e) => {
+    if (e.target.id === 'taskEditorModal') closeTaskEditorModal();
+  });
+}
+
+async function init(){
+  renderAll(); // نعرض القائمة الافتراضية فورًا من غير ما ننتظر الشبكة
   attachResetListener();
+  attachTaskEditorListener();
+  updateUI();
+
+  await setupFirebase();
+  await loadTaskConfig();
+  await loadState();
+  renderAll(); // نعيد البناء لو فيه قائمة مهام مخصصة محفوظة
+  applyStateToInputs();
   updateUI();
   attachRealtimeSync();
+  attachTaskConfigRealtimeSync();
 }
 
 init();

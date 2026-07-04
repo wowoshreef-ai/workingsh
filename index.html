@@ -101,6 +101,38 @@
   .overall-text .big{ font-family:'Cairo'; font-weight:800; font-size:15px; }
   .overall-text .small{ font-size:12.5px; color:var(--text-mid); }
 
+  .monthly-panel{
+    max-width:480px; margin:26px auto 0;
+    background:var(--glass); border:1px solid var(--border); border-radius:16px;
+    padding:16px 18px;
+  }
+  .monthly-title{ font-family:'Cairo'; font-weight:800; font-size:12.5px; margin-bottom:14px; color:var(--text-mid); text-align:center; }
+  .monthly-row{ display:flex; align-items:center; gap:10px; margin-bottom:11px; }
+  .monthly-row:last-child{ margin-bottom:0; }
+  .monthly-channel-name{
+    font-family:'Cairo'; font-weight:700; font-size:11.5px; color:var(--accent);
+    width:82px; flex-shrink:0; white-space:nowrap; text-align:right;
+  }
+  .monthly-bar{ flex:1; height:7px; border-radius:100px; background:var(--glass-strong); overflow:hidden; }
+  .monthly-bar-fill{ height:100%; border-radius:100px; background:var(--accent); transition:width .4s ease; }
+  .monthly-pct{ font-family:'Cairo'; font-weight:700; font-size:11.5px; color:var(--text-mid); width:34px; text-align:left; flex-shrink:0; }
+
+  .history-zone{ display:flex; justify-content:center; margin-top:24px; }
+  .history-week{ border:1px solid var(--border); border-radius:14px; padding:12px 14px; margin-bottom:10px; }
+  .history-chart-wrap{
+    background:rgba(0,0,0,0.2); border:1px solid var(--border); border-radius:14px;
+    padding:14px 10px 6px; margin-bottom:16px;
+  }
+  .history-chart-title{ font-family:'Cairo'; font-weight:700; font-size:11.5px; color:var(--text-mid); text-align:center; margin-bottom:6px; }
+  .history-chart{ width:100%; height:auto; display:block; }
+  .history-week:last-child{ margin-bottom:0; }
+  .history-week-header{ display:flex; justify-content:space-between; align-items:center; font-family:'Cairo'; font-weight:700; font-size:13px; margin-bottom:8px; }
+  .history-week-date{ color:var(--text-hi); }
+  .history-week-pct{ color:#3ddc84; }
+  .history-week-channels{ display:flex; flex-direction:column; gap:5px; }
+  .history-channel-row{ display:flex; justify-content:space-between; font-size:12px; color:var(--text-mid); }
+  .history-empty{ color:var(--text-mid); font-size:13px; text-align:center; padding:24px 0; }
+
   /* ===== DAY CARDS ===== */
   .days-grid{ display:flex; flex-direction:column; gap:16px; margin-top:36px; }
 
@@ -193,6 +225,17 @@
   .thumb-prompt-btn:disabled{ opacity:.35; cursor:not-allowed; }
   .thumb-flash{ font-size:11px; color:#3ddc84; opacity:0; transition:opacity .3s; }
   .thumb-flash.show{ opacity:1; }
+
+  .titles-prompt-btn{
+    background:rgba(168,85,247,0.12); border:1px solid rgba(168,85,247,0.4);
+    color:#c084fc; font-family:'Cairo'; font-weight:700; font-size:12.5px;
+    padding:8px 15px; border-radius:100px; cursor:pointer; transition:all .2s;
+    white-space:nowrap;
+  }
+  .titles-prompt-btn:hover{ background:rgba(168,85,247,0.2); }
+  .titles-prompt-btn:disabled{ opacity:.35; cursor:not-allowed; }
+  .titles-flash{ font-size:11px; color:#3ddc84; opacity:0; transition:opacity .3s; }
+  .titles-flash.show{ opacity:1; }
 
   .hook-input{
     width:100%; margin-bottom:8px;
@@ -309,9 +352,18 @@
       </div>
     </div>
 
+    <div class="monthly-panel">
+      <div class="monthly-title">📊 الالتزام الشهري لكل قناة</div>
+      <div class="monthly-channels" id="monthlyChannels"></div>
+    </div>
+
   </div>
 
   <main class="days-grid" id="daysGrid"></main>
+
+  <div class="history-zone">
+    <button class="reset-btn" id="openHistoryBtn">📁 سجل الأسابيع السابقة</button>
+  </div>
 
   <div class="danger-zone">
     <button class="reset-btn" id="openTaskEditorBtn">✏️ تعديل قائمة المهام</button>
@@ -319,6 +371,18 @@
   </div>
 
   <footer>جدول ثابت لأربع قنوات — بيتحدّث تلقائيًا وبيفتكر اللي خلّصته وسكريبتاتك كمان</footer>
+</div>
+
+<div class="modal-overlay" id="historyModal">
+  <div class="modal-box editor-box">
+    <div class="modal-icon">📁</div>
+    <h3>سجل الأسابيع السابقة</h3>
+    <p class="modal-desc">بيتسجل أداء الأسبوع تلقائيًا كل ما تعمل "إعادة تعيين الجدول بالكامل".</p>
+    <div class="editor-body" id="historyBody"></div>
+    <div class="modal-actions">
+      <button class="modal-cancel" id="closeHistoryBtn" style="flex:1;">إغلاق</button>
+    </div>
+  </div>
 </div>
 
 <div class="modal-overlay" id="resetModal">
@@ -353,17 +417,18 @@
 // FIREBASE CONFIG
 // =====================
 const firebaseConfig = {
-  apiKey: "",
-  authDomain: "",
-  projectId: "",
-  storageBucket: "",
-  messagingSenderId: "",
-  appId: ""
+  apiKey: "AIzaSyCbkWMiK1l5oif9AeA6Ryj6xt3otMCwjz4",
+  authDomain: "dgrr-992d4.firebaseapp.com",
+  projectId: "dgrr-992d4",
+  storageBucket: "dgrr-992d4.firebasestorage.app",
+  messagingSenderId: "638428738785",
+  appId: "1:638428738785:web:d759a863fd5e168e5573a0"
 };
 
 let db = null;
 let stateDocRef = null;
 let taskConfigDocRef = null;
+let historyDocRef = null;
 let firebaseReady = false;
 let fsGetDoc, fsSetDoc, fsOnSnapshot;
 
@@ -379,6 +444,7 @@ async function setupFirebase(){
     db = getFirestore(firebaseApp);
     stateDocRef = doc(db, "weeklyTracker", "main");
     taskConfigDocRef = doc(db, "weeklyTracker", "taskConfig");
+    historyDocRef = doc(db, "weeklyTracker", "history");
     fsGetDoc = getDoc;
     fsSetDoc = setDoc;
     fsOnSnapshot = onSnapshot;
@@ -414,6 +480,9 @@ function buildDefaultTaskConfig(){
 // taskConfig هو المصدر الوحيد لهيكل الأيام والمهام — قابل للتعديل من مودال "تعديل قائمة المهام"
 let taskConfig = buildDefaultTaskConfig();
 let lastSyncedTaskConfigJSON = '';
+
+// سجل الأسابيع السابقة: { [weekKey]: { savedAt, totalDone, totalTasks, perChannel } }
+let historyCache = {};
 
 let state = {}; // { [taskId]: { done: bool, script: string, hook: string } }
 let saveTimer = null;
@@ -632,8 +701,246 @@ const THUMBNAIL_PROMPTS = {
   'عرب جيمرز': CYAN_THUMBNAIL_TEMPLATE,
 };
 
+const TITLES_PROMPT_TEMPLATE = `أنت خبير عالمي في كتابة عناوين الفيديوهات الفيروسية (YouTube Shorts / Reels / TikTok)، ومتخصص في تحقيق أعلى معدل نقر (CTR) دون استخدام عناوين مضللة.
+سأضع لك سكريبت فيديو كامل بين الأقواس.
+مهمتك هي:
+1. اقرأ السكريبت بالكامل وافهم الفكرة الأساسية.
+2. استخرج أقوى لحظة (Hook) أو أكثر معلومة صادمة أو مثيرة للفضول.
+3. حدد المشاعر التي يمكن استغلالها في العنوان (الدهشة، الصدمة، الفضول، الخوف، الإعجاب، المفاجأة...).
+4. أنشئ عناوين جذابة تعتمد على محتوى السكريبت فقط، بدون اختلاق أي معلومات غير موجودة.
+5. اجعل العناوين قصيرة وسريعة وسهلة القراءة على الهاتف.
+6. تجنب الكليك بيت الكاذب، لكن اجعل العنوان يثير الفضول لأقصى درجة.
+7. استخدم اللهجة المصرية الطبيعية.
+8. لا تكرر نفس الفكرة بصياغات مختلفة، بل قدّم زوايا متنوعة.
+قسّم النتائج إلى:
+## 🔥 أفضل 10 عناوين (مرتبة من الأقوى للأضعف)
+لكل عنوان اكتب:
+- العنوان
+- تقييم CTR من 10
+- سبب قوة العنوان (سطر واحد)
+ثم اكتب:
+## 🎯 أفضل 5 عناوين مناسبة لـ YouTube Shorts
+## 📱 أفضل 5 عناوين مناسبة لـ Reels / TikTok
+## ⚡ أفضل 5 عناوين تعتمد على الفضول
+## 😱 أفضل 5 عناوين تعتمد على الصدمة
+## 🤯 أفضل 5 عناوين تعتمد على "مستحيل!"
+## 🧠 أفضل 5 عناوين تبدو وكأنها ستصبح ترند
+وفي النهاية اختر عنوانًا واحدًا فقط باعتباره:
+# 👑 العنوان الذهبي
+ثم اشرح في 3 نقاط فقط لماذا هو الأفضل.
+==========================
+🎬 السكريبت:
+[ضع السكريبت هنا]
+==========================`;
+
 function getTaskState(id){ return state[id] || { done:false, script:'', hook:'' }; }
 function ensureTaskState(id){ if(!state[id]) state[id] = { done:false, script:'', hook:'' }; return state[id]; }
+
+// الأسبوع بيتحسب بادئ من يوم الجمعة (أول يوم في الجدول)
+function getWeekKeyForDate(d){
+  const date = new Date(d);
+  const day = date.getDay(); // 0=أحد ... 5=جمعة ... 6=سبت
+  const diffFromFriday = (day - 5 + 7) % 7;
+  date.setDate(date.getDate() - diffFromFriday);
+  date.setHours(0,0,0,0);
+  return date.toISOString().slice(0,10); // YYYY-MM-DD لتاريخ الجمعة
+}
+function getCurrentWeekKey(){ return getWeekKeyForDate(new Date()); }
+
+function formatWeekLabel(weekKey){
+  const start = new Date(weekKey + 'T00:00:00');
+  const end = new Date(start);
+  end.setDate(end.getDate() + 5); // من الجمعة للأربعاء (6 أيام)
+  const fmt = (dt) => dt.toLocaleDateString('ar-EG', { day:'numeric', month:'short' });
+  return `أسبوع ${fmt(start)} – ${fmt(end)}`;
+}
+
+function formatWeekShort(weekKey){
+  const start = new Date(weekKey + 'T00:00:00');
+  return start.toLocaleDateString('ar-EG', { day:'numeric', month:'short' });
+}
+
+// رسم بياني بسيط (SVG) بيقارن نسبة الإنجاز بين الأسابيع المسجلة، من الأقدم للأحدث
+function buildHistoryChart(weekKeysDesc){
+  if (!weekKeysDesc.length) return '';
+  const chronological = [...weekKeysDesc].sort(); // من الأقدم للأحدث
+
+  const width = 600, height = 170;
+  const paddingX = 20, paddingTop = 26, paddingBottom = 28;
+  const plotHeight = height - paddingTop - paddingBottom;
+  const gap = 10;
+  const barWidth = Math.max(16, (width - paddingX*2) / chronological.length - gap);
+
+  let bars = '';
+  chronological.forEach((wk, i) => {
+    const data = historyCache[wk];
+    const pct = data.totalTasks ? Math.round((data.totalDone/data.totalTasks)*100) : 0;
+    const barHeight = Math.max(2, (pct/100) * plotHeight);
+    const x = paddingX + i * (barWidth + gap);
+    const y = paddingTop + (plotHeight - barHeight);
+    const color = pct >= 80 ? '#3ddc84' : pct >= 40 ? '#f5b942' : '#ff6b81';
+
+    bars += `
+      <rect x="${x}" y="${y}" width="${barWidth}" height="${barHeight}" rx="5" fill="${color}" opacity="0.9"></rect>
+      <text x="${x + barWidth/2}" y="${y - 6}" text-anchor="middle" font-size="10.5" font-weight="700" fill="#eef0f6" font-family="Cairo, sans-serif">${pct}%</text>
+      <text x="${x + barWidth/2}" y="${height - paddingBottom + 16}" text-anchor="middle" font-size="9.5" fill="#a7abbc" font-family="Tajawal, sans-serif">${formatWeekShort(wk)}</text>
+    `;
+  });
+
+  const baselineY = paddingTop + plotHeight;
+
+  return `
+    <svg viewBox="0 0 ${width} ${height}" class="history-chart" preserveAspectRatio="xMidYMid meet">
+      <line x1="${paddingX - 6}" y1="${baselineY}" x2="${width - paddingX + 6}" y2="${baselineY}" stroke="rgba(255,255,255,0.12)" stroke-width="1"></line>
+      ${bars}
+    </svg>
+  `;
+}
+
+// نحسب عدد المهام المنجزة/الكلي لكل قناة بناءً على أي تشكيلة أيام وأي حالة (مفيد للأسبوع الحالي أو أي أسبوع مؤرشف)
+function computeChannelStats(cfg, st){
+  const stats = {};
+  Object.keys(CHANNELS).forEach(ch => { stats[ch] = { done:0, total:0 }; });
+  cfg.forEach(day => {
+    day.tasks.forEach(t => {
+      if (!stats[t.channel]) stats[t.channel] = { done:0, total:0 };
+      stats[t.channel].total++;
+      if ((st[t.id] || {}).done) stats[t.channel].done++;
+    });
+  });
+  return stats;
+}
+
+function computeMonthlyStats(){
+  const monthKey = new Date().toISOString().slice(0,7); // YYYY-MM
+  const totals = {};
+  Object.keys(CHANNELS).forEach(ch => { totals[ch] = { done:0, total:0 }; });
+
+  // الأسبوع الحالي اللي لسه شغالين فيه
+  const live = computeChannelStats(taskConfig, state);
+  Object.keys(live).forEach(ch => {
+    totals[ch].done += live[ch].done;
+    totals[ch].total += live[ch].total;
+  });
+
+  // أي أسابيع اتحفظت في السجل ووقعت في نفس الشهر الحالي (بنحسب الأسبوع على الشهر اللي بدأ فيه)
+  Object.entries(historyCache).forEach(([weekKey, wk]) => {
+    if (!weekKey.startsWith(monthKey)) return;
+    Object.entries(wk.perChannel || {}).forEach(([ch, c]) => {
+      if (!totals[ch]) totals[ch] = { done:0, total:0 };
+      totals[ch].done += c.done;
+      totals[ch].total += c.total;
+    });
+  });
+
+  return totals;
+}
+
+function renderMonthlyStats(){
+  const container = document.getElementById('monthlyChannels');
+  if (!container) return;
+  const totals = computeMonthlyStats();
+  container.innerHTML = '';
+  Object.keys(CHANNELS).forEach(ch => {
+    const c = totals[ch] || { done:0, total:0 };
+    const pct = c.total ? Math.round((c.done/c.total)*100) : 0;
+    const row = document.createElement('div');
+    row.className = 'monthly-row';
+    row.style.setProperty('--accent', CHANNELS[ch].accent);
+    row.innerHTML = `
+      <span class="monthly-channel-name">${CHANNELS[ch].icon} ${ch}</span>
+      <div class="monthly-bar"><div class="monthly-bar-fill" style="width:${pct}%"></div></div>
+      <span class="monthly-pct">${pct}%</span>
+    `;
+    container.appendChild(row);
+  });
+}
+
+async function loadHistory(){
+  if (!firebaseReady) return;
+  try {
+    const snap = await fsGetDoc(historyDocRef);
+    if (snap.exists() && snap.data() && snap.data().weeks){
+      historyCache = snap.data().weeks;
+    }
+  } catch (e){
+    console.error('تعذر تحميل سجل الأسابيع السابقة', e);
+  }
+}
+
+// بتتسجل تلقائيًا كل ما تعمل "إعادة تعيين الجدول بالكامل" — بتاخد صورة من أداء الأسبوع قبل ما يتصفّر
+async function archiveCurrentWeek(snapshotState, snapshotConfig){
+  if (!firebaseReady) return;
+  const weekKey = getCurrentWeekKey();
+  const perChannel = computeChannelStats(snapshotConfig, snapshotState);
+  let totalDone = 0, totalTasks = 0;
+  Object.values(perChannel).forEach(c => { totalDone += c.done; totalTasks += c.total; });
+  if (totalTasks === 0) return; // مفيش مهام أصلاً، متسجلش أسبوع فاضي
+
+  historyCache[weekKey] = { savedAt: Date.now(), totalDone, totalTasks, perChannel };
+  try {
+    await fsSetDoc(historyDocRef, { weeks: historyCache }, { merge: true });
+  } catch (e){
+    console.error('تعذر حفظ سجل الأسبوع', e);
+  }
+}
+
+function openHistoryModal(){
+  const modal = document.getElementById('historyModal');
+  const body = document.getElementById('historyBody');
+  body.innerHTML = '';
+
+  const weekKeys = Object.keys(historyCache).sort().reverse();
+  if (!weekKeys.length){
+    body.innerHTML = '<p class="history-empty">لسه مفيش أسابيع متسجلة. أول ما تعمل "إعادة تعيين الجدول" هيتسجل أداء الأسبوع الحالي هنا.</p>';
+  } else {
+    const chartWrap = document.createElement('div');
+    chartWrap.className = 'history-chart-wrap';
+    chartWrap.innerHTML = `<div class="history-chart-title">📈 نسبة الإنجاز عبر الأسابيع</div>${buildHistoryChart(weekKeys)}`;
+    body.appendChild(chartWrap);
+
+    weekKeys.forEach(weekKey => {
+      const wk = historyCache[weekKey];
+      const pct = wk.totalTasks ? Math.round((wk.totalDone/wk.totalTasks)*100) : 0;
+
+      const section = document.createElement('div');
+      section.className = 'history-week';
+
+      const header = document.createElement('div');
+      header.className = 'history-week-header';
+      header.innerHTML = `
+        <span class="history-week-date">${formatWeekLabel(weekKey)}</span>
+        <span class="history-week-pct">${pct}% (${wk.totalDone}/${wk.totalTasks})</span>
+      `;
+      section.appendChild(header);
+
+      const channelsWrap = document.createElement('div');
+      channelsWrap.className = 'history-week-channels';
+      Object.keys(CHANNELS).forEach(ch => {
+        const c = (wk.perChannel && wk.perChannel[ch]) || { done:0, total:0 };
+        if (!c.total) return;
+        const chPct = Math.round((c.done/c.total)*100);
+        const row = document.createElement('div');
+        row.className = 'history-channel-row';
+        row.innerHTML = `<span>${CHANNELS[ch].icon} ${ch}</span><span>${c.done}/${c.total} — ${chPct}%</span>`;
+        channelsWrap.appendChild(row);
+      });
+      section.appendChild(channelsWrap);
+
+      body.appendChild(section);
+    });
+  }
+
+  modal.classList.add('open');
+}
+
+function attachHistoryListener(){
+  document.getElementById('openHistoryBtn').addEventListener('click', openHistoryModal);
+  const closeBtn = document.getElementById('closeHistoryBtn');
+  const modal = document.getElementById('historyModal');
+  closeBtn.addEventListener('click', () => modal.classList.remove('open'));
+  modal.addEventListener('click', (e) => { if (e.target === modal) modal.classList.remove('open'); });
+}
 
 const checkIconSVG = `<svg viewBox="0 0 24 24" fill="none"><path d="M4 12.5L9.5 18L20 6" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 
@@ -695,11 +1002,13 @@ function buildDayCard(day, dayIdx){
       <input type="text" class="hook-input" id="hook-${id}" placeholder="🪝 الهوك — أول جملة هتقولها في أول ثانيتين...">
       <textarea id="script-${id}" placeholder="اكتب هنا سكريبت ${channel} — ${label}..."></textarea>
       <div class="script-hint">بيتحفظ لوحده أول ما توقف تكتب <span class="save-flash" id="flash-${id}">✓ اتحفظ</span></div>
-      ${hasThumbTemplate ? `
       <div class="thumb-prompt-row">
+        ${hasThumbTemplate ? `
         <button type="button" class="thumb-prompt-btn" id="thumbBtn-${id}" disabled>📋 نسخ برومبت ثامبنيل</button>
-        <span class="thumb-flash" id="thumbFlash-${id}">✓ اتنسخ، حطه في أداة توليد الصور</span>
-      </div>` : ''}
+        <span class="thumb-flash" id="thumbFlash-${id}">✓ اتنسخ، حطه في أداة توليد الصور</span>` : ''}
+        <button type="button" class="titles-prompt-btn" id="titlesBtn-${id}" disabled>🎯 اقتراح عناوين</button>
+        <span class="titles-flash" id="titlesFlash-${id}">✓ اتنسخ، حطه في الشات</span>
+      </div>
     `;
     block.appendChild(panel);
 
@@ -756,6 +1065,25 @@ function buildDayCard(day, dayIdx){
         }
       });
     }
+
+    // event: نسخ برومبت اقتراح العناوين مع حقن السكريبت مكان [ضع السكريبت هنا] (يظهر لأي فيديو بعد كتابة السكريبت)
+    {
+      const titlesBtn = panel.querySelector('.titles-prompt-btn');
+      const titlesFlash = panel.querySelector('.titles-flash');
+      titlesBtn.addEventListener('click', async () => {
+        const scriptText = (getTaskState(id).script || '').trim();
+        if (!scriptText) return;
+        const finalPrompt = TITLES_PROMPT_TEMPLATE.replace('[ضع السكريبت هنا]', scriptText);
+        try {
+          await navigator.clipboard.writeText(finalPrompt);
+          titlesFlash.classList.add('show');
+          clearTimeout(titlesBtn._flashTimer);
+          titlesBtn._flashTimer = setTimeout(() => titlesFlash.classList.remove('show'), 2500);
+        } catch(err){
+          console.error('تعذر نسخ برومبت العناوين', err);
+        }
+      });
+    }
   });
 
   card.appendChild(tasksWrap);
@@ -772,6 +1100,9 @@ function updateScriptButton(id){
 
   const thumbBtn = document.getElementById(`thumbBtn-${id}`);
   if (thumbBtn) thumbBtn.disabled = !hasScript;
+
+  const titlesBtn = document.getElementById(`titlesBtn-${id}`);
+  if (titlesBtn) titlesBtn.disabled = !hasScript;
 }
 
 function buildWeekStrip(){
@@ -854,6 +1185,7 @@ function updateUI(){
   document.getElementById('overallCount').textContent = `${totalDone} / ${totalTasks} مهمة`;
 
   updateTabTitle();
+  renderMonthlyStats();
 }
 
 async function loadState(){
@@ -978,6 +1310,10 @@ const ACTION_PASSWORD = '2002';
 let pendingPasswordAction = null; // 'reset' | 'editTasks'
 
 function performFullReset(){
+  const snapshotState = JSON.parse(JSON.stringify(state));
+  const snapshotConfig = taskConfig;
+  archiveCurrentWeek(snapshotState, snapshotConfig);
+
   state = {};
   document.querySelectorAll('.task input[type="checkbox"]').forEach(input => input.checked = false);
   document.querySelectorAll('.hook-input').forEach(h => h.value = '');
@@ -990,6 +1326,8 @@ function performFullReset(){
   });
   document.querySelectorAll('.thumb-prompt-btn').forEach(btn => btn.disabled = true);
   document.querySelectorAll('.thumb-flash').forEach(f => f.classList.remove('show'));
+  document.querySelectorAll('.titles-prompt-btn').forEach(btn => btn.disabled = true);
+  document.querySelectorAll('.titles-flash').forEach(f => f.classList.remove('show'));
   updateUI();
   saveState();
 }
@@ -1001,7 +1339,7 @@ function openPasswordModal(action){
   const desc = document.getElementById('modalDesc');
   if (action === 'reset'){
     title.textContent = 'متأكد إنك عايز تصفّر الجدول؟';
-    desc.textContent = 'هيتمسح كل الـ checkboxes والسكريبتات والهوكس اللي كتبتها. اكتب الباسورد عشان تأكد.';
+    desc.textContent = 'هيتسجل أداء الأسبوع ده في السجل تلقائيًا، وبعدين هيتمسح كل الـ checkboxes والسكريبتات والهوكس. اكتب الباسورد عشان تأكد.';
   } else {
     title.textContent = 'تعديل قائمة المهام';
     desc.textContent = 'الباسورد مطلوب عشان تقدر تضيف أو تشيل أو تعدّل أي مهمة في الجدول.';
@@ -1158,11 +1496,13 @@ async function init(){
   renderAll(); // نعرض القائمة الافتراضية فورًا من غير ما ننتظر الشبكة
   attachResetListener();
   attachTaskEditorListener();
+  attachHistoryListener();
   updateUI();
 
   await setupFirebase();
   await loadTaskConfig();
   await loadState();
+  await loadHistory();
   renderAll(); // نعيد البناء لو فيه قائمة مهام مخصصة محفوظة
   applyStateToInputs();
   updateUI();

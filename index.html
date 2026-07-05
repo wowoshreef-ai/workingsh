@@ -415,93 +415,45 @@
 
 <script type="module">
 // =====================
-// GITHUB STORAGE CONFIG
+// FIREBASE CONFIG
 // =====================
-// البيانات كلها (checkboxes/سكريبتات/سجل الأسابيع) بتتخزن في ملف JSON واحد
-// جوه الـ Repo ده، عن طريق GitHub Contents API.
-const GITHUB_CONFIG = {
-  owner: 'wowoshreef-ai',
-  repo: 'workingsh',
-  branch: 'main',
-  path: 'tracker-data.json',
-  // << حط التوكن بتاعك هنا (Fine-grained PAT بصلاحية Contents: Read & write على الريبو ده بس) >>
-  token: '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',
+// البيانات كلها (checkboxes/سكريبتات/قائمة المهام/سجل الأسابيع) بتتخزن في مستند واحد على Firestore.
+// القيم دي آمن إنها تتعرض للعلن — الحماية الحقيقية بتتظبط من جوه Firebase Console (Security Rules)، مش بإخفاء المفتاح.
+const firebaseConfig = {
+  apiKey: "AIzaSyAjim9q1jA9FkUnC8CfEx4xnQcz_iUgFoY",
+  authDomain: "sher-3a9f6.firebaseapp.com",
+  projectId: "sher-3a9f6",
+  storageBucket: "sher-3a9f6.firebasestorage.app",
+  messagingSenderId: "580081386849",
+  appId: "1:580081386849:web:a8b74727adc6536ab8b120"
 };
 
-let githubReady = false;
-let ghSha = null; // الـ sha بتاع آخر نسخة معروفة من الملف، لازم نبعتها عشان GitHub يعرف إننا مش هنكتب فوق تعديل حد تاني من غير ما نعرف
-let pollTimer = null;
+let db = null;
+let stateDocRef = null;
+let firebaseReady = false;
+let fsGetDoc, fsSetDoc, fsOnSnapshot;
 
-function utf8ToBase64(str){
-  const bytes = new TextEncoder().encode(str);
-  let binary = '';
-  bytes.forEach(b => { binary += String.fromCharCode(b); });
-  return btoa(binary);
-}
-function base64ToUtf8(b64){
-  const binary = atob(b64.replace(/\n/g, ''));
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-  return new TextDecoder('utf-8').decode(bytes);
-}
-
-function githubUrl(){
-  return `https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/${GITHUB_CONFIG.path}?ref=${GITHUB_CONFIG.branch}`;
-}
-function githubHeaders(extra){
-  return {
-    'Authorization': `Bearer ${GITHUB_CONFIG.token}`,
-    'Accept': 'application/vnd.github+json',
-    'X-GitHub-Api-Version': '2022-11-28',
-    ...extra,
-  };
-}
-
-// تحميل الملف من الريبو. لو مش موجود لسه (أول مرة)، بيرجع null.
-async function githubGetFile(){
-  const res = await fetch(githubUrl(), { headers: githubHeaders() });
-  if (res.status === 404) return null;
-  if (!res.ok) throw new Error(`GitHub GET فشل: ${res.status}`);
-  const json = await res.json();
-  ghSha = json.sha;
-  return JSON.parse(base64ToUtf8(json.content));
-}
-
-// حفظ الملف على الريبو. لو حصل تعارض (409) بسبب تعديل جاي من جهاز تاني في نفس اللحظة،
-// بنجيب الـ sha الجديد ونحاول تاني مرة واحدة بس.
-async function githubPutFile(dataObj, isRetry){
-  const body = {
-    message: `تحديث بيانات الجدول — ${new Date().toISOString()}`,
-    content: utf8ToBase64(JSON.stringify(dataObj, null, 2)),
-    branch: GITHUB_CONFIG.branch,
-  };
-  if (ghSha) body.sha = ghSha;
-  const res = await fetch(githubUrl(), {
-    method: 'PUT',
-    headers: githubHeaders({ 'Content-Type': 'application/json' }),
-    body: JSON.stringify(body),
-  });
-  if (res.status === 409 && !isRetry){
-    await githubGetFile(); // نجيب أحدث sha
-    return githubPutFile(dataObj, true);
-  }
-  if (!res.ok) throw new Error(`GitHub PUT فشل: ${res.status} ${await res.text()}`);
-  const result = await res.json();
-  ghSha = result.content.sha;
-  return true;
-}
-
-// تحميل أولي غير معطّل: لو فشل (نت، توكن غلط، الريبو متحجب)
-// التطبيق هيفضل شغال محليًا من غير ما ينهار كله
-async function setupGithub(){
+// تحميل Firebase بشكل غير معطّل: لو فشل التحميل (نت، إعدادات غلط)
+// التطبيق هيفضل شغال محليًا (checkboxes/سكريبتات/برومبتات) من غير ما ينهار كله
+async function setupFirebase(){
   try {
-    if (!GITHUB_CONFIG.token || GITHUB_CONFIG.token.includes('حط التوكن')){
-      throw new Error('التوكن لسه مش متظبط في GITHUB_CONFIG.token');
+    if (!firebaseConfig.apiKey){
+      throw new Error('لسه محطتش قيم firebaseConfig');
     }
-    githubReady = true;
+    const [{ initializeApp }, { getFirestore, doc, getDoc, setDoc, onSnapshot }] = await Promise.all([
+      import("https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js"),
+      import("https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js")
+    ]);
+    const firebaseApp = initializeApp(firebaseConfig);
+    db = getFirestore(firebaseApp);
+    stateDocRef = doc(db, "weeklyTracker", "main");
+    fsGetDoc = getDoc;
+    fsSetDoc = setDoc;
+    fsOnSnapshot = onSnapshot;
+    firebaseReady = true;
   } catch (e){
-    console.error('تعذر تفعيل التخزين على GitHub — التطبيق هيشتغل محليًا من غير مزامنة سحابية', e);
-    githubReady = false;
+    console.error('تعذر تحميل Firebase — التطبيق هيشتغل محليًا من غير مزامنة سحابية لحد ما تتظبط إعدادات firebaseConfig', e);
+    firebaseReady = false;
   }
 }
 
@@ -1219,23 +1171,24 @@ function updateUI(){
   renderMonthlyStats();
 }
 
-// تحميل كل البيانات (checkboxes/سكريبتات/قائمة المهام/سجل الأسابيع) من ملف واحد على GitHub
+// تحميل كل البيانات (checkboxes/سكريبتات/قائمة المهام/سجل الأسابيع) من مستند واحد على Firestore
 async function loadAllData(){
-  if (!githubReady){ state = {}; return; }
+  if (!firebaseReady){ state = {}; return; }
   try {
-    const remote = await githubGetFile();
-    if (remote){
+    const snap = await fsGetDoc(stateDocRef);
+    if (snap.exists() && snap.data()){
+      const remote = snap.data();
       state = remote.state || {};
       if (Array.isArray(remote.taskConfig) && remote.taskConfig.length) taskConfig = remote.taskConfig;
       historyCache = remote.history || {};
     } else {
-      // أول مرة: الملف مش موجود لسه، نعمله بالقيم الافتراضية الحالية
+      // أول مرة: المستند مش موجود لسه، نعمله بالقيم الافتراضية الحالية
       state = {};
-      await githubPutFile({ state, taskConfig, history: historyCache, updatedAt: Date.now() });
+      await fsSetDoc(stateDocRef, { state, taskConfig, history: historyCache, updatedAt: Date.now() });
     }
     lastSyncedJSON = JSON.stringify({ state, taskConfig, history: historyCache });
   } catch (e) {
-    console.error('تعذر تحميل البيانات من GitHub', e);
+    console.error('تعذر تحميل البيانات من Firestore', e);
     state = {};
   }
 }
@@ -1246,49 +1199,46 @@ function queueSave(){
 }
 
 async function saveAllData(){
-  if (!githubReady) return;
+  if (!firebaseReady) return;
   try {
     const combined = { state, taskConfig, history: historyCache };
     const json = JSON.stringify(combined);
     if (json === lastSyncedJSON) return; // مفيش تغيير فعلي، متبعتش كتابة زيادة
     lastSyncedJSON = json;
-    await githubPutFile({ ...combined, updatedAt: Date.now() });
+    await fsSetDoc(stateDocRef, { ...combined, updatedAt: Date.now() });
   } catch (e) {
-    console.error('تعذر حفظ البيانات على GitHub', e);
+    console.error('تعذر حفظ البيانات في Firestore', e);
   }
 }
 
-// مزامنة دورية: GitHub مالهوش إشعارات فورية زي Firestore، فبنعمل "polling" كل شوية
-// عشان لو جهاز تاني عدّل البيانات، الصفحة دي تتحدّث لوحدها من غير ما تعمل reload يدوي
-function attachGithubPolling(){
-  if (!githubReady) return;
-  pollTimer = setInterval(async () => {
-    try {
-      const remote = await githubGetFile();
-      if (!remote) return;
-      const remoteJSON = JSON.stringify({
-        state: remote.state || {},
-        taskConfig: Array.isArray(remote.taskConfig) && remote.taskConfig.length ? remote.taskConfig : taskConfig,
-        history: remote.history || {},
-      });
-      // منع اللوب: لو البيانات الجاية من GitHub هي نفسها اللي عندنا بالفعل، متعملش إعادة رسم
-      if (remoteJSON === lastSyncedJSON) return;
+// مزامنة فورية: لو جهاز تاني عدّل البيانات، الصفحة دي بتتحدّث لوحدها من غير ما تعمل reload يدوي
+function attachRealtimeSync(){
+  if (!firebaseReady) return;
+  fsOnSnapshot(stateDocRef, (snap) => {
+    if (!snap.exists()) return;
+    const remote = snap.data();
+    const remoteJSON = JSON.stringify({
+      state: remote.state || {},
+      taskConfig: Array.isArray(remote.taskConfig) && remote.taskConfig.length ? remote.taskConfig : taskConfig,
+      history: remote.history || {},
+    });
+    // منع اللوب: لو البيانات الجاية من Firestore هي نفسها اللي عندنا بالفعل، متعملش إعادة رسم
+    if (remoteJSON === lastSyncedJSON) return;
 
-      lastSyncedJSON = remoteJSON;
-      state = remote.state || {};
-      if (Array.isArray(remote.taskConfig) && remote.taskConfig.length) taskConfig = remote.taskConfig;
-      historyCache = remote.history || {};
-      renderAll();
-      applyStateToInputs();
-      updateUI();
-    } catch (e){
-      console.error('تعذر تنفيذ المزامنة الدورية مع GitHub', e);
-    }
-  }, 15000); // كل 15 ثانية
+    lastSyncedJSON = remoteJSON;
+    state = remote.state || {};
+    if (Array.isArray(remote.taskConfig) && remote.taskConfig.length) taskConfig = remote.taskConfig;
+    historyCache = remote.history || {};
+    renderAll();
+    applyStateToInputs();
+    updateUI();
+  }, (error) => {
+    console.error('تعذر تفعيل المزامنة الفورية', error);
+  });
 }
 
 async function saveTaskConfig(){
-  if (!githubReady) return false;
+  if (!firebaseReady) return false;
   await saveAllData();
   return true;
 }
@@ -1503,12 +1453,12 @@ async function init(){
   attachHistoryListener();
   updateUI();
 
-  await setupGithub();
+  await setupFirebase();
   await loadAllData();
   renderAll(); // نعيد البناء لو فيه قائمة مهام مخصصة محفوظة
   applyStateToInputs();
   updateUI();
-  attachGithubPolling();
+  attachRealtimeSync();
 }
 
 init();

@@ -1,1 +1,163 @@
-{"state":{},"taskConfig":[],"history":{},"updatedAt":0,"note":"initial test - safe to overwrite"}
+{
+  "state": {
+    "d1-t1": {
+      "done": true,
+      "script": "",
+      "hook": ""
+    }
+  },
+  "taskConfig": [
+    {
+      "name": "الجمعة",
+      "tasks": [
+        {
+          "id": "d0-t0",
+          "channel": "القيادي",
+          "label": "فيديو 1"
+        },
+        {
+          "id": "d0-t1",
+          "channel": "القيادي",
+          "label": "فيديو 2"
+        },
+        {
+          "id": "d0-t2",
+          "channel": "رائج",
+          "label": "فيديو ترند"
+        },
+        {
+          "id": "d0-t3",
+          "channel": "عرب جيمرز",
+          "label": "فيديو جيمنج"
+        }
+      ]
+    },
+    {
+      "name": "السبت",
+      "tasks": [
+        {
+          "id": "d1-t0",
+          "channel": "القيادي",
+          "label": "فيديو 1"
+        },
+        {
+          "id": "d1-t1",
+          "channel": "القيادي",
+          "label": "فيديو 2"
+        },
+        {
+          "id": "d1-t2",
+          "channel": "رائج",
+          "label": "فيديو ترند"
+        },
+        {
+          "id": "d1-t3",
+          "channel": "سائح",
+          "label": "فيديو سياحي"
+        }
+      ]
+    },
+    {
+      "name": "الأحد",
+      "tasks": [
+        {
+          "id": "d2-t0",
+          "channel": "القيادي",
+          "label": "فيديو 1"
+        },
+        {
+          "id": "d2-t1",
+          "channel": "القيادي",
+          "label": "فيديو 2"
+        },
+        {
+          "id": "d2-t2",
+          "channel": "رائج",
+          "label": "فيديو ترند"
+        },
+        {
+          "id": "d2-t3",
+          "channel": "عرب جيمرز",
+          "label": "فيديو جيمنج"
+        }
+      ]
+    },
+    {
+      "name": "الإثنين",
+      "tasks": [
+        {
+          "id": "d3-t0",
+          "channel": "القيادي",
+          "label": "فيديو 1"
+        },
+        {
+          "id": "d3-t1",
+          "channel": "القيادي",
+          "label": "فيديو 2"
+        },
+        {
+          "id": "d3-t2",
+          "channel": "رائج",
+          "label": "فيديو ترند"
+        },
+        {
+          "id": "d3-t3",
+          "channel": "سائح",
+          "label": "فيديو سياحي"
+        }
+      ]
+    },
+    {
+      "name": "الثلاثاء",
+      "tasks": [
+        {
+          "id": "d4-t0",
+          "channel": "القيادي",
+          "label": "فيديو 1"
+        },
+        {
+          "id": "d4-t1",
+          "channel": "القيادي",
+          "label": "فيديو 2"
+        },
+        {
+          "id": "d4-t2",
+          "channel": "رائج",
+          "label": "فيديو ترند"
+        },
+        {
+          "id": "d4-t3",
+          "channel": "عرب جيمرز",
+          "label": "فيديو جيمنج"
+        }
+      ]
+    },
+    {
+      "name": "الأربعاء",
+      "tasks": [
+        {
+          "id": "d5-t0",
+          "channel": "القيادي",
+          "label": "فيديو 1"
+        },
+        {
+          "id": "d5-t1",
+          "channel": "القيادي",
+          "label": "فيديو 2"
+        },
+        {
+          "id": "d5-t2",
+          "channel": "رائج",
+          "label": "فيديو ترند"
+        },
+        {
+          "id": "d5-t3",
+          "channel": "سائح",
+          "label": "فيديو سياحي"
+        }
+      ]
+    }
+  ],
+  "history": {},
+  "updatedAt": 1783212211164
+}

@@ -415,45 +415,24 @@
 
 <script type="module">
 // =====================
-// FIREBASE CONFIG
+// LOCAL STORAGE CONFIG
 // =====================
-// البيانات كلها (checkboxes/سكريبتات/قائمة المهام/سجل الأسابيع) بتتخزن في مستند واحد على Firestore.
-// القيم دي آمن إنها تتعرض للعلن — الحماية الحقيقية بتتظبط من جوه Firebase Console (Security Rules)، مش بإخفاء المفتاح.
-const firebaseConfig = {
-  apiKey: "AIzaSyAjim9q1jA9FkUnC8CfEx4xnQcz_iUgFoY",
-  authDomain: "sher-3a9f6.firebaseapp.com",
-  projectId: "sher-3a9f6",
-  storageBucket: "sher-3a9f6.firebasestorage.app",
-  messagingSenderId: "580081386849",
-  appId: "1:580081386849:web:a8b74727adc6536ab8b120"
-};
+// البيانات كلها (checkboxes/سكريبتات/قائمة المهام/سجل الأسابيع) بتتخزن محليًا
+// في المتصفح بتاع الجهاز ده بس (localStorage) — مفيش مزامنة سحابية ومفيش أي مفتاح أو توكن.
+// معنى كده: كل جهاز/متصفح هيبقى ليه نسخته الخاصة، ولو مسحت بيانات المتصفح هتضيع البيانات.
+const LOCAL_STORAGE_KEY = 'weekly-tracker-data-v1';
 
-let db = null;
-let stateDocRef = null;
-let firebaseReady = false;
-let fsGetDoc, fsSetDoc, fsOnSnapshot;
+let storageReady = false;
 
-// تحميل Firebase بشكل غير معطّل: لو فشل التحميل (نت، إعدادات غلط)
-// التطبيق هيفضل شغال محليًا (checkboxes/سكريبتات/برومبتات) من غير ما ينهار كله
-async function setupFirebase(){
+function setupLocalStorage(){
   try {
-    if (!firebaseConfig.apiKey){
-      throw new Error('لسه محطتش قيم firebaseConfig');
-    }
-    const [{ initializeApp }, { getFirestore, doc, getDoc, setDoc, onSnapshot }] = await Promise.all([
-      import("https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js"),
-      import("https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js")
-    ]);
-    const firebaseApp = initializeApp(firebaseConfig);
-    db = getFirestore(firebaseApp);
-    stateDocRef = doc(db, "weeklyTracker", "main");
-    fsGetDoc = getDoc;
-    fsSetDoc = setDoc;
-    fsOnSnapshot = onSnapshot;
-    firebaseReady = true;
+    const testKey = '__storage_test__';
+    localStorage.setItem(testKey, '1');
+    localStorage.removeItem(testKey);
+    storageReady = true;
   } catch (e){
-    console.error('تعذر تحميل Firebase — التطبيق هيشتغل محليًا من غير مزامنة سحابية لحد ما تتظبط إعدادات firebaseConfig', e);
-    firebaseReady = false;
+    console.error('التخزين المحلي (localStorage) مش متاح في المتصفح ده — التطبيق هيشتغل من غير ما يحفظ حاجة', e);
+    storageReady = false;
   }
 }
 
@@ -1171,24 +1150,24 @@ function updateUI(){
   renderMonthlyStats();
 }
 
-// تحميل كل البيانات (checkboxes/سكريبتات/قائمة المهام/سجل الأسابيع) من مستند واحد على Firestore
+// تحميل كل البيانات (checkboxes/سكريبتات/قائمة المهام/سجل الأسابيع) من التخزين المحلي في المتصفح
 async function loadAllData(){
-  if (!firebaseReady){ state = {}; return; }
+  if (!storageReady){ state = {}; return; }
   try {
-    const snap = await fsGetDoc(stateDocRef);
-    if (snap.exists() && snap.data()){
-      const remote = snap.data();
+    const raw = localStorage.getItem(LOCAL_STORAGE_KEY);
+    if (raw){
+      const remote = JSON.parse(raw);
       state = remote.state || {};
       if (Array.isArray(remote.taskConfig) && remote.taskConfig.length) taskConfig = remote.taskConfig;
       historyCache = remote.history || {};
     } else {
-      // أول مرة: المستند مش موجود لسه، نعمله بالقيم الافتراضية الحالية
+      // أول مرة: مفيش بيانات محفوظة لسه، نعمل نسخة بالقيم الافتراضية الحالية
       state = {};
-      await fsSetDoc(stateDocRef, { state, taskConfig, history: historyCache, updatedAt: Date.now() });
+      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify({ state, taskConfig, history: historyCache, updatedAt: Date.now() }));
     }
     lastSyncedJSON = JSON.stringify({ state, taskConfig, history: historyCache });
   } catch (e) {
-    console.error('تعذر تحميل البيانات من Firestore', e);
+    console.error('تعذر تحميل البيانات من التخزين المحلي', e);
     state = {};
   }
 }
@@ -1199,46 +1178,49 @@ function queueSave(){
 }
 
 async function saveAllData(){
-  if (!firebaseReady) return;
+  if (!storageReady) return;
   try {
     const combined = { state, taskConfig, history: historyCache };
     const json = JSON.stringify(combined);
     if (json === lastSyncedJSON) return; // مفيش تغيير فعلي، متبعتش كتابة زيادة
     lastSyncedJSON = json;
-    await fsSetDoc(stateDocRef, { ...combined, updatedAt: Date.now() });
+    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify({ ...combined, updatedAt: Date.now() }));
   } catch (e) {
-    console.error('تعذر حفظ البيانات في Firestore', e);
+    console.error('تعذر حفظ البيانات في التخزين المحلي', e);
   }
 }
 
-// مزامنة فورية: لو جهاز تاني عدّل البيانات، الصفحة دي بتتحدّث لوحدها من غير ما تعمل reload يدوي
+// مزامنة بين تابات نفس المتصفح على نفس الجهاز (لو فاتح الجدول في أكتر من تاب/نافذة في نفس اللحظة)
+// ملحوظة: ده مش مزامنة بين أجهزة مختلفة، لأن التخزين محلي على المتصفح بس
 function attachRealtimeSync(){
-  if (!firebaseReady) return;
-  fsOnSnapshot(stateDocRef, (snap) => {
-    if (!snap.exists()) return;
-    const remote = snap.data();
-    const remoteJSON = JSON.stringify({
-      state: remote.state || {},
-      taskConfig: Array.isArray(remote.taskConfig) && remote.taskConfig.length ? remote.taskConfig : taskConfig,
-      history: remote.history || {},
-    });
-    // منع اللوب: لو البيانات الجاية من Firestore هي نفسها اللي عندنا بالفعل، متعملش إعادة رسم
-    if (remoteJSON === lastSyncedJSON) return;
+  if (!storageReady) return;
+  window.addEventListener('storage', (e) => {
+    if (e.key !== LOCAL_STORAGE_KEY || !e.newValue) return;
+    try {
+      const remote = JSON.parse(e.newValue);
+      const remoteJSON = JSON.stringify({
+        state: remote.state || {},
+        taskConfig: Array.isArray(remote.taskConfig) && remote.taskConfig.length ? remote.taskConfig : taskConfig,
+        history: remote.history || {},
+      });
+      // منع اللوب: لو البيانات الجاية هي نفسها اللي عندنا بالفعل، متعملش إعادة رسم
+      if (remoteJSON === lastSyncedJSON) return;
 
-    lastSyncedJSON = remoteJSON;
-    state = remote.state || {};
-    if (Array.isArray(remote.taskConfig) && remote.taskConfig.length) taskConfig = remote.taskConfig;
-    historyCache = remote.history || {};
-    renderAll();
-    applyStateToInputs();
-    updateUI();
-  }, (error) => {
-    console.error('تعذر تفعيل المزامنة الفورية', error);
+      lastSyncedJSON = remoteJSON;
+      state = remote.state || {};
+      if (Array.isArray(remote.taskConfig) && remote.taskConfig.length) taskConfig = remote.taskConfig;
+      historyCache = remote.history || {};
+      renderAll();
+      applyStateToInputs();
+      updateUI();
+    } catch (err){
+      console.error('تعذر تنفيذ المزامنة بين التابات', err);
+    }
   });
 }
 
 async function saveTaskConfig(){
-  if (!firebaseReady) return false;
+  if (!storageReady) return false;
   await saveAllData();
   return true;
 }
@@ -1453,7 +1435,7 @@ async function init(){
   attachHistoryListener();
   updateUI();
 
-  await setupFirebase();
+  setupLocalStorage();
   await loadAllData();
   renderAll(); // نعيد البناء لو فيه قائمة مهام مخصصة محفوظة
   applyStateToInputs();
